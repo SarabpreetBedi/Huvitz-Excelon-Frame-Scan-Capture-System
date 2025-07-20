@@ -117,55 +117,89 @@ class OMAGenerator:
     
     def _parse_oma_content(self, content):
         """Parse the binary OMa file content"""
-        offset = 0
-        
-        # Read header
-        magic = struct.unpack('<4s', content[offset:offset+4])[0]
-        offset += 4
-        
-        if magic != b'OMAF':
-            raise ValueError("Invalid OMa file format")
-        
-        version = struct.unpack('<I', content[offset:offset+4])[0]
-        offset += 4
-        
-        num_radii = struct.unpack('<I', content[offset:offset+4])[0]
-        offset += 4
-        
-        # Read timestamp
-        timestamp_len = struct.unpack('<I', content[offset:offset+4])[0]
-        offset += 4
-        timestamp = content[offset:offset+timestamp_len].decode('utf-8')
-        offset += timestamp_len
-        
-        # Read device info
-        device_len = struct.unpack('<I', content[offset:offset+4])[0]
-        offset += 4
-        device_info = content[offset:offset+device_len].decode('utf-8')
-        offset += device_len
-        
-        # Read frame data
-        width, height, center_x, center_y = struct.unpack('<4I', content[offset:offset+16])
-        offset += 16
-        area, perimeter = struct.unpack('<2d', content[offset:offset+16])
-        offset += 16
-        
-        # Read radius data
-        radii = list(struct.unpack(f'<{num_radii}H', content[offset:offset+num_radii*2]))
-        
-        return {
-            'version': version,
-            'timestamp': timestamp,
-            'device_info': device_info,
-            'measurements': {
-                'width': width,
-                'height': height,
-                'center': (center_x, center_y),
-                'area': area,
-                'perimeter': perimeter
-            },
-            'radii': radii
-        }
+        try:
+            offset = 0
+            
+            # Check if we have enough data for header
+            if len(content) < 16:
+                raise ValueError("File too small to be a valid OMa file")
+            
+            # Read header
+            magic = struct.unpack('<4s', content[offset:offset+4])[0]
+            offset += 4
+            
+            if magic != b'OMAF':
+                raise ValueError("Invalid OMa file format - wrong magic number")
+            
+            version = struct.unpack('<I', content[offset:offset+4])[0]
+            offset += 4
+            
+            num_radii = struct.unpack('<I', content[offset:offset+4])[0]
+            offset += 4
+            
+            # Validate number of radius points
+            if num_radii <= 0 or num_radii > 10000:
+                raise ValueError(f"Invalid number of radius points: {num_radii}")
+            
+            # Read timestamp
+            if offset + 4 > len(content):
+                raise ValueError("File truncated - missing timestamp length")
+            
+            timestamp_len = struct.unpack('<I', content[offset:offset+4])[0]
+            offset += 4
+            
+            if offset + timestamp_len > len(content):
+                raise ValueError("File truncated - missing timestamp data")
+            
+            timestamp = content[offset:offset+timestamp_len].decode('utf-8')
+            offset += timestamp_len
+            
+            # Read device info
+            if offset + 4 > len(content):
+                raise ValueError("File truncated - missing device info length")
+            
+            device_len = struct.unpack('<I', content[offset:offset+4])[0]
+            offset += 4
+            
+            if offset + device_len > len(content):
+                raise ValueError("File truncated - missing device info data")
+            
+            device_info = content[offset:offset+device_len].decode('utf-8')
+            offset += device_len
+            
+            # Read frame data
+            if offset + 32 > len(content):
+                raise ValueError("File truncated - missing frame data")
+            
+            width, height, center_x, center_y = struct.unpack('<4I', content[offset:offset+16])
+            offset += 16
+            area, perimeter = struct.unpack('<2d', content[offset:offset+16])
+            offset += 16
+            
+            # Read radius data
+            expected_radius_size = num_radii * 2
+            if offset + expected_radius_size > len(content):
+                raise ValueError(f"File truncated - missing radius data. Expected {expected_radius_size} bytes, got {len(content) - offset}")
+            
+            radii = list(struct.unpack(f'<{num_radii}H', content[offset:offset+expected_radius_size]))
+            
+            return {
+                'version': version,
+                'timestamp': timestamp,
+                'device_info': device_info,
+                'measurements': {
+                    'width': width,
+                    'height': height,
+                    'center': (center_x, center_y),
+                    'area': area,
+                    'perimeter': perimeter
+                },
+                'radii': radii
+            }
+            
+        except Exception as e:
+            print(f"Error parsing OMa content: {e}")
+            return None
     
     def export_to_json(self, scan_data, filename):
         """Export scan data to JSON format for debugging"""

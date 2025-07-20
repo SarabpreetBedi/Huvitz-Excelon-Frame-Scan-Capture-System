@@ -72,7 +72,7 @@ class HuvitzExcelonCapture:
     
     def capture_scan(self):
         """Capture a single frame scan"""
-        if not self.current_frame is not None:
+        if self.current_frame is None:
             return None
         
         # Process the current frame for frame scan data
@@ -96,11 +96,19 @@ class HuvitzExcelonCapture:
     def get_available_cameras(self):
         """Get list of available camera devices"""
         cameras = []
-        for i in range(10):  # Check first 10 camera indices
-            cap = cv2.VideoCapture(i)
-            if cap.isOpened():
-                cameras.append(i)
-                cap.release()
+        # Only check first 5 camera indices to avoid errors
+        for i in range(5):
+            try:
+                cap = cv2.VideoCapture(i)
+                if cap.isOpened():
+                    # Try to read a frame to confirm it's working
+                    ret, frame = cap.read()
+                    if ret:
+                        cameras.append(i)
+                    cap.release()
+            except Exception as e:
+                print(f"Error checking camera {i}: {e}")
+                continue
         return cameras
 
 def main():
