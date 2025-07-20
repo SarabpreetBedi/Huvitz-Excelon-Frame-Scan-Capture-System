@@ -167,6 +167,19 @@ Run comprehensive tests:
 ```bash
 python test_scan.py
 ```
+### Huvitz Excelon Frame Scan
+<table>
+  <tr>
+    <td><img src="screenshots/HuvitzExcelon1.png" width="200"/></td>
+    <td><img src="screenshots/HuvitzExcelon2.png" width="200"/></td>
+    <td><img src="screenshots/HuvitzExcelon3.png" width="200"/></td>
+  </tr>
+  <tr>
+     <td><img src="screenshots/HuvitzExcelon4.png" width="200"/></td>
+    <td><img src="screenshots/HuvitzExcelon5.png" width="200"/></td>
+    <td><img src="screenshots/HuvitzExcelon6.png" width="200"/></td>
+  </tr>
+</table>
 
 ## License
 
